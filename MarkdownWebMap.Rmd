@@ -1,0 +1,163 @@
+---
+title: "마크다운-웹페이지"
+author: "Lee, Deokyoung"
+date: '2019 11 28 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# R을 이용한 웹페이지
+
+## 작성자 소개
+
+### 이름
+### 학과
+### 좋아하는 것들
++ 친구
+  - 친구1
+  - 친구2
++ 애착 물건
+  - 스마트폰1
+  - 가방
++ 음식
+  - 자장면
+  - 육개장
+
+
+## 자료 분석 1
+
+### 필요한 라이브러리 불러오기     
+실행 때 나오는 메시지를 보여주지 않는다.
+```{r message=F}
+library(ggplot2)
+library(dplyr)
+```
+
+자동차 연비 데이터인 mpg 데이터를 살펴보자.
+
+```{r}
+head(mpg)
+str(mpg)
+```
+
+mpg 데이터에서 자동차의 배기량(displ)과 도시연비(cty)의 관계를 그래프로 살펴보자
+
+```{r}
+ggplot(mpg, aes(x=displ, y=hwy)) + 
+  geom_point(aes(color=class, size=displ)) +
+  stat_smooth(method = 'loess')
+```
+
+
+## 자료 분석 2
+강원도 도시대기측정결과를 지도에 표현해보자.
+
+### 지도 관련 패키지 설치 및 불러오기
++ 공간 지도 분석을 위한 패키지
+ - maps: 세계 지도 데이터베이스
+ - mapproj: 지도 상에 위도와 경도를 표시
+ - ggplot2: map_data()를 이용하여 지도정보를 R로 불러오기
+ - ggiraphExtra : 단계 구분도 표시
+
+```{r message=F}
+library(maps)
+library(mapproj)
+library(ggplot2)
+library(ggiraphExtra)
+```
+
+```{r}
+korea_map <- map_data("world", region = "South Korea")
+head(korea_map)
+
+```
+
+지도에서 확인하기
+```{r}
+map('world', region = c('South Korea', 'North Korea'), col='skyblue', fill=TRUE)
+title("Korea map in maps packages", col='blue', fill=T)
+
+map('world', region=c('South Korea'), col = 'blue', add = TRUE, fill = TRUE)
+map('world', region=c('North Korea'), col = 'red', add = TRUE, fill = TRUE)
+```
+
+#### 한국행정지도
+kormaps2014 패키지를 설치하여 한국행정지도 데이터를 가져온다. 
++ kormap1 : 2014년 한국행정지도(시도별)
++ kormap2 : 2014년 한국행정지도(시군구별)
++ kormap3 : 2014년 한국행정지도(읍면동별)
+
+아래와 같이 kormaps2014 패키지를 설치한다.
+
+```{r}
+# install.packages("devtools")
+# devtools::install_github("cardiomoon/kormaps2014")
+```
+패키지를 불러와 데이터를 살펴보자.
+
+```{r}
+library(kormaps2014)  # 한국행정지도 데이터
+# kormap1 : 2014년 한국행정지도(시도별)
+# kormap2 : 2014년 한국행정지도(시군구별)
+# kormap3 : 2014년 한국행정지도(읍면동별)
+library(ggplot2)      # 그래프 그리기
+library(ggiraphExtra) # 단계구분도 작성
+
+library(dplyr)        # 강원도만 추출하기 위해 필요
+library(stringr)
+
+```
+
+```{r}
+head(kormap2, 10)
+str(kormap2)
+```
+
+강원도 데이터만 추출해보자.
+
+```{r}
+#kangwon_map <- read.csv("kangwon_map.csv")
+kangwon_map <- kormap2 %>% filter(str_starts(region, "32"))
+head(kangwon_map, 10)
+```
+
+
+
+### 강원도 도시대기 측정결과 가져오기
+[강원도보건환경연구원](http://www.gihe.re.kr/contents.do?cid=40ab28ec059d45ccb1bf1f8155a7dd38
+)의 자료실에서 4월 강원도 도시대기측정망 결과를 다운로드하여 R로 데이터를 가져온다.
+
+```{r}
+kangwon_air_201904 <- read.csv("E:/Coding/R/Github/RBigData3/kangwon_air_201904.csv")
+kangwon_air_201904 <- rename(kangwon_air_201904,city=시군,station=측정소)
+
+head(kangwon_air_201904)
+```
+
+4월 강원도 도시대기 측정망 데이터 중 PM2.5 분포를 강원도 지도데이터 상에 나타내보자.
+
+```{r}
+
+ggplot(kangwon_air_201904,aes(map_id=region,fill=PM2.5))+
+  geom_map(map=kangwon_map,colour="black",size=0.1)+
+  expand_limits(x=kangwon_map$long,y=kangwon_map$lat)+
+  scale_fill_gradientn(colours=c('white','orange','red'))+
+  ggtitle("2015년도 시도별 인구분포도")+
+  coord_map()
+
+```
+   
+   
+```{r}
+ggChoropleth(data = kangwon_air_201904,     # 지도에 표현할 데이터
+             mapping=aes(fill = PM2.5,        # 색깔로 표현할 변수
+                         map_id = region, # 지역 기준 변수, region
+                         tooltip = name),  # 지도 위에 표시할 지역명
+             title = "강원도 2019년 4월 미세먼지 PM2.5 분포",
+             map = kangwon_map,             # 지도 데이터
+             interactive = T)  
+```
+
